@@ -1,0 +1,2398 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>דוח צ' - מחלקת קשר</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        #debug-status {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            color: #fff;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            padding: 8px 10px;
+            z-index: 9999;
+            direction: ltr;
+            white-space: nowrap;
+            overflow-x: auto;
+            overflow-y: hidden;
+            text-overflow: ellipsis;
+            display: none;
+            max-height: 60px;
+            line-height: 1.4;
+        }
+        
+        #debug-status.error {
+            background: rgba(200, 0, 0, 0.95);
+            display: block;
+        }
+
+        #debug-status.show {
+            display: block !important;
+        }
+
+        #debug-display {
+            position: fixed;
+            top: 50px;
+            right: 10px;
+            width: 90%;
+            max-width: 400px;
+            max-height: 70vh;
+            background: rgba(0, 0, 0, 0.98);
+            color: #fff;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            padding: 15px;
+            z-index: 10000;
+            overflow-y: auto;
+            border-radius: 8px;
+            border: 2px solid #007bff;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            display: none;
+            direction: ltr;
+            text-align: left;
+        }
+
+        #debug-display.show {
+            display: block !important;
+        }
+
+        #debug-toggle {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 123, 255, 0.95);
+            color: white;
+            border: 2px solid white;
+            border-radius: 50%;
+            width: 45px;
+            height: 45px;
+            font-size: 18px;
+            cursor: pointer;
+            z-index: 10001;
+            display: block;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        #debug-toggle:active {
+            transform: scale(0.95);
+            background: rgba(0, 123, 255, 1);
+        }
+
+        @media (max-width: 768px) {
+            #debug-display {
+                width: 95%;
+                right: 2.5%;
+                top: 60px;
+                max-height: 60vh;
+            }
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 10px;
+            min-height: 100vh;
+            padding-bottom: 30px;
+        }
+        
+        @media (min-width: 768px) {
+            body {
+                padding: 20px;
+            }
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 1.8em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        @media (min-width: 768px) {
+            .header h1 {
+                font-size: 2.5em;
+            }
+        }
+        
+        .header .date {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .controls {
+            padding: 15px;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e9ecef;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        @media (min-width: 768px) {
+            .controls {
+                padding: 25px 30px;
+                gap: 20px;
+            }
+        }
+        
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .control-group label {
+            font-weight: 600;
+            color: #495057;
+            font-size: 0.9em;
+        }
+        
+        @media (min-width: 768px) {
+            .control-group label {
+                font-size: 1em;
+            }
+        }
+        
+        select, input[type="text"] {
+            padding: 8px 12px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            font-size: 0.9em;
+            transition: all 0.3s;
+            width: 100%;
+            max-width: 200px;
+        }
+        
+        @media (min-width: 768px) {
+            select, input[type="text"] {
+                padding: 10px 15px;
+                font-size: 1em;
+            }
+        }
+        
+        select:focus, input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            white-space: nowrap;
+        }
+        
+        @media (min-width: 768px) {
+            .btn {
+                padding: 12px 25px;
+                font-size: 1em;
+            }
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #218838;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4);
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+            border: none;
+        }
+        
+        .btn-danger:hover {
+            background: #c82333;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(220, 53, 69, 0.4);
+        }
+        
+        .equipment-type-filter {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            padding: 8px 12px;
+            background: white;
+            border-radius: 8px;
+            border: 2px solid #dee2e6;
+        }
+        
+        .radio-option {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .radio-option input {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+        
+        .radio-option label {
+            cursor: pointer;
+            font-size: 0.9em;
+            color: #495057;
+        }
+        
+        .stats {
+            padding: 15px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            background: #f8f9fa;
+        }
+        
+        @media (min-width: 768px) {
+            .stats {
+                padding: 25px 30px;
+                gap: 20px;
+            }
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+            transition: transform 0.3s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .stat-card .number {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+        
+        .stat-card .label {
+            color: #6c757d;
+            font-size: 0.9em;
+        }
+        
+        .table-container {
+            padding: 15px;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        @media (min-width: 768px) {
+            .table-container {
+                padding: 30px;
+            }
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            table-layout: fixed;
+        }
+        
+        thead {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        th {
+            padding: 10px 4px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 0.8em;
+            cursor: pointer;
+            white-space: normal;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            -webkit-hyphens: auto;
+            hyphens: auto;
+        }
+        
+        th.sortable:hover {
+            background-color: rgba(255,255,255,0.1);
+        }
+        
+        @media (min-width: 768px) {
+            th {
+                padding: 15px;
+                font-size: 1.1em;
+            }
+        }
+        
+        td {
+            padding: 10px 4px;
+            text-align: center;
+            border-bottom: 1px solid #e9ecef;
+            font-size: 0.85em;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            word-break: normal;
+            -webkit-line-break: after-white-space;
+        }
+        
+        @media (min-width: 768px) {
+            td {
+                padding: 15px 8px;
+                font-size: 1em;
+            }
+        }
+        
+        tbody tr {
+            transition: background 0.2s;
+        }
+        
+        tbody tr:hover {
+            background: #f8f9fa;
+        }
+        
+        tbody tr.checked {
+            background: #d4edda;
+        }
+        
+        tbody tr.faulty {
+            background: #f8d7da;
+        }
+        
+        tbody tr.credited {
+            background: #fff3cd;
+        }
+        
+        .location-input {
+            padding: 6px;
+            border: 2px solid #dee2e6;
+            border-radius: 6px;
+            font-size: 0.85em;
+            width: 100%;
+            min-width: 80px;
+            text-align: center;
+            box-sizing: border-box;
+        }
+        
+        @media (min-width: 768px) {
+            .location-input {
+                padding: 8px;
+                font-size: 0.95em;
+            }
+        }
+        
+        .location-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .btn-fault, .btn-note, .btn-credit {
+            padding: 3px 4px;
+            border-radius: 4px;
+            font-size: 0.65em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            white-space: nowrap;
+            display: block;
+            width: 100%;
+            margin-bottom: 2px;
+        }
+        
+        @media (min-width: 768px) {
+            .btn-fault, .btn-note, .btn-credit {
+                padding: 4px 8px;
+                font-size: 0.75em;
+                margin-bottom: 3px;
+            }
+        }
+        
+        .btn-fault {
+            border: 2px solid #dc3545;
+            background: white;
+            color: #dc3545;
+        }
+        
+        .btn-fault:hover {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .btn-fault.active {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .btn-note {
+            border: 2px solid #17a2b8;
+            background: white;
+            color: #17a2b8;
+        }
+        
+        .btn-note:hover {
+            background: #17a2b8;
+            color: white;
+        }
+        
+        .btn-note.active {
+            background: #17a2b8;
+            color: white;
+        }
+        
+        .btn-credit {
+            border: 2px solid #fd7e14;
+            background: white;
+            color: #fd7e14;
+        }
+        
+        .btn-credit:hover {
+            background: #fd7e14;
+            color: white;
+        }
+        
+        .btn-credit.active {
+            background: #fd7e14;
+            color: white;
+        }
+        
+        .note-row {
+            background: #f0f8ff !important;
+        }
+        
+        .note-row td {
+            padding: 10px !important;
+        }
+        
+        .note-input {
+            width: 100%;
+            padding: 8px;
+            border: 2px solid #17a2b8;
+            border-radius: 4px;
+            font-size: 0.9em;
+            resize: vertical;
+            min-height: 60px;
+        }
+        
+        .note-input:focus {
+            outline: none;
+            border-color: #138496;
+            box-shadow: 0 0 0 3px rgba(23, 162, 184, 0.1);
+        }
+        
+        input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+        
+        .equipment-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+        
+        .badge-kavi {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+        
+        .badge-organi {
+            background: #f3e5f5;
+            color: #7b1fa2;
+        }
+        
+        .save-section {
+            padding: 15px;
+            text-align: center;
+            background: #e8f4f8;
+            border-top: 1px solid #d0e7ef;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .save-status {
+            font-size: 0.9em;
+            color: #6c757d;
+            font-weight: 500;
+        }
+        
+        .export-section {
+            padding: 20px 15px;
+            text-align: center;
+            background: #f8f9fa;
+            border-top: 2px solid #e9ecef;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        @media (min-width: 768px) {
+            .export-section {
+                padding: 30px;
+                gap: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="debug-status"></div>
+    <div id="debug-display"></div>
+    <button id="debug-toggle">🐛</button>
+    <div class="container">
+        <div class="header">
+            <h1>📊 דוח צ' - <span id="departmentName">מחלקת קשר</span></h1>
+            <div class="date" id="currentDate"></div>
+        </div>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label>🔍 חיפוש:</label>
+                <input type="text" id="searchInput" placeholder="חיפוש לפי צ'...">
+            </div>
+            
+            <div class="control-group">
+                <label>📍 סנן לפי מיקום:</label>
+                <select id="filterLocation">
+                    <option value="">הכל</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <label>🔧 סנן לפי סוג מצפין:</label>
+                <select id="filterType">
+                    <option value="">הכל</option>
+                </select>
+            </div>
+            
+            <div class="equipment-type-filter">
+                <label>אורגני/קווי:</label>
+                <div class="radio-option">
+                    <input type="radio" id="filterAll" name="equipmentType" value="all" checked>
+                    <label for="filterAll">הכל</label>
+                </div>
+                <div class="radio-option">
+                    <input type="radio" id="filterKavi" name="equipmentType" value="קווי">
+                    <label for="filterKavi">קווי</label>
+                </div>
+                <div class="radio-option">
+                    <input type="radio" id="filterOrgani" name="equipmentType" value="אורגני">
+                    <label for="filterOrgani">אורגני</label>
+                </div>
+            </div>
+            
+            <button class="btn btn-primary" onclick="selectAll()">✓ אשר הכל</button>
+            <button class="btn btn-primary" onclick="deselectAll()">✗ בטל הכל</button>
+        </div>
+        
+        <div class="stats">
+            <div class="stat-card">
+                <div class="number" id="totalChecks">0</div>
+                <div class="label">סך הכל צ'</div>
+            </div>
+            <div class="stat-card">
+                <div class="number" id="checkedCount">0</div>
+                <div class="label">מאושרים</div>
+            </div>
+            <div class="stat-card">
+                <div class="number" id="uncheckedCount">0</div>
+                <div class="label">ממתינים לאישור</div>
+            </div>
+        </div>
+        
+        <div class="table-container">
+            <table id="dataTable">
+                <thead>
+                    <tr>
+                        <th style="width: 8%;">✓</th>
+                        <th class="sortable" onclick="sortTable('equipmentType')" style="width: 12%;">אורגני/קווי ⬍</th>
+                        <th class="sortable" onclick="sortTable('type')" style="width: 13%;">סוג מצפין ⬍</th>
+                        <th class="sortable" onclick="sortTable('check')" style="width: 13%;">מספר צ' ⬍</th>
+                        <th class="sortable" onclick="sortTable('location')" style="width: 25%;">מיקום ⬍</th>
+                        <th class="sortable" onclick="sortTable('updated')" style="width: 14%;">עודכן לאחרונה ⬍</th>
+                        <th style="width: 15%;">פעולות</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <!-- Test row to verify table rendering works -->
+                    <tr style="background: #ffeb3b;">
+                        <td colspan="7" style="padding: 20px; text-align: center; font-weight: bold; color: #000;">
+                            🔍 בדיקת טבלה - אם אתה רואה את זה, הטבלה עובדת!
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="save-section">
+            <button class="btn btn-primary" onclick="manualSave()">
+                💾 שמור נתונים עדכניים
+            </button>
+            <button class="btn btn-danger" onclick="clearAllData()">
+                🗑️ איפוס נתונים שמורים
+            </button>
+            <span id="saveStatus" class="save-status">טוען...</span>
+        </div>
+        
+        <div class="export-section">
+            <button class="btn btn-success" onclick="exportToExcel()">📥 ייצא לדו"ח צ' - אקסל</button>
+        </div>
+    </div>
+
+    <script>
+        debugLog('=== SCRIPT START ===');
+        debugLog('User Agent: ' + navigator.userAgent);
+        debugLog('iOS Safari check: ' + (/iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream));
+
+        // ==========================================================================
+        // CONFIGURATION - Replace with your department name and data
+        // ==========================================================================
+        const DEPARTMENT_NAME = "מפקדה";
+        const FILE_TIMESTAMP = "debug_test";
+        const STORAGE_KEY = `dashboard_${DEPARTMENT_NAME}_${FILE_TIMESTAMP}`;
+
+        const data = [
+  {
+    "check": "484919",
+    "type": "ברק רחוק",
+    "location": "10 א (רכב 702197)",
+    "department": "מפקדה",
+    "equipmentType": "אורגני",
+    "updated": "20/11/2025",
+    "checked": false,
+    "faulty": false,
+    "credited": false,
+    "note": ""
+  },
+  {
+    "check": "779714",
+    "type": "טאבלט שקד CF 33 לרכב",
+    "location": "10 א (רכב 702197)",
+    "department": "מפקדה",
+    "equipmentType": "אורגני",
+    "updated": "20/11/2025",
+    "checked": false,
+    "faulty": false,
+    "credited": false,
+    "note": ""
+  },
+  {
+    "check": "351086",
+    "type": "טל 88",
+    "location": "10 א (רכב 702197)",
+    "department": "מפקדה",
+    "equipmentType": "אורגני",
+    "updated": "20/11/2025",
+    "checked": false,
+    "faulty": false,
+    "credited": false,
+    "note": ""
+  },
+  {
+    "check": "766001",
+    "type": "מב\"ן של רכב 🚘",
+    "location": "10 א (רכב 702197)",
+    "department": "מפקדה",
+    "equipmentType": "אורגני",
+    "updated": "20/11/2025",
+    "checked": false,
+    "faulty": false,
+    "credited": false,
+    "note": ""
+  },
+  {
+    "check": "599842",
+    "type": "מגן מכלול",
+    "location": "10 א (רכב 702197)",
+    "department": "מפקדה",
+    "equipmentType": "אורגני",
+    "updated": "20/11/2025",
+    "checked": false,
+    "faulty": false,
+    "credited": false,
+    "note": ""
+  },
+  {
+    "check": "1109859",
+    "type": "מדיה נתיקה",
+    "location": "10 א (רכב 702197)",
+    "department": "מפקדה",
+    "equipmentType": "אורגני",
+    "updated": "20/11/2025",
+    "checked": false,
+    "faulty": false,
+    "credited": false,
+    "note": ""
+  },
+  {
+    "check": "1112281",
+    "type": "מדיה נתיקה",
+    "location": "10 א (רכב 702197)",
+    "department": "מפקדה",
+    "equipmentType": "אורגני",
+    "updated": "20/11/2025",
+    "checked": false,
+    "faulty": false,
+    "credited": false,
+    "note": ""
+  },
+  {
+    "check": "484172",
+    "type": "ברק רחוק",
+    "location": "13 א (רכב 702015)",
+    "department": "מפקדה",
+    "equipmentType": "אורגני",
+    "updated": "20/11/2025",
+    "checked": false,
+    "faulty": false,
+    "credited": false,
+    "note": ""
+  },
+  {
+    "check": "987565",
+    "type": "טאבלט שקד CF 33 לרכב",
+    "location": "13 א (רכב 702015)",
+    "department": "מפקדה",
+    "equipmentType": "אורגני",
+    "updated": "20/11/2025",
+    "checked": false,
+    "faulty": false,
+    "credited": false,
+    "note": ""
+  },
+  {
+    "check": "765772",
+    "type": "מב\"ן של רכב 🚘",
+    "location": "13 א (רכב 702015)",
+    "department": "מפקדה",
+    "equipmentType": "אורגני",
+    "updated": "20/11/2025",
+    "checked": false,
+    "faulty": false,
+    "credited": false,
+    "note": ""
+  },
+  {
+    "check": "1108367",
+    "type": "מדיה נתיקה",
+    "location": "13 א (רכב 702015)",
+    "department": "מפקדה",
+    "equipmentType": "אורגני",
+    "updated": "20/11/2025",
+    "checked": false,
+    "faulty": false,
+    "credited": false,
+    "note": ""
+  },
+  {
+    "check": "587266",
+    "type": "נר לילה ",
+    "location": "13 א (רכב 702015)",
+    "department": "מפקדה",
+    "equipmentType": "אורגני",
+    "updated": "20/11/2025",
+    "checked": false,
+    "faulty": false,
+    "credited": false,
+    "note": ""
+  },
+  {
+    "check": "774993",
+    "type": "מחשב",
+    "location": "אל פוראן",
+    "department": "מפקדה",
+    "equipmentType": "קווי",
+    "updated": "20/11/2025",
+    "checked": false,
+    "faulty": false,
+    "credited": false,
+    "note": ""
+  },
+  {
+    "check": "546963",
+    "type": "סלולר צבאי",
+    "location": "מג\"ד",
+    "department": "מפקדה",
+    "equipmentType": "אורגני",
+    "updated": "20/11/2025",
+    "checked": false,
+    "faulty": false,
+    "credited": false,
+    "note": ""
+  },
+  {
+    "check": "102307567",
+    "type": "אולר",
+    "location": "מג\"ד ",
+    "department": "מפקדה",
+    "equipmentType": "אורגני",
+    "updated": "20/11/2025",
+    "checked": false,
+    "faulty": false,
+    "credited": false,
+    "note": ""
+  },
+  {
+    "check": "111220351",
+    "type": "עמוד +",
+    "location": "מג\"ד ",
+    "department": "מפקדה",
+    "equipmentType": "אורגני",
+    "updated": "20/11/2025",
+    "checked": false,
+    "faulty": false,
+    "credited": false,
+    "note": ""
+  },
+  {
+    "check": "491929",
+    "type": "710",
+    "location": "מג\"ד צוות",
+    "department": "מפקדה",
+    "equipmentType": "אורגני",
+    "updated": "20/11/2025",
+    "checked": false,
+    "faulty": false,
+    "credited": false,
+    "note": ""
+  },
+  {
+    "check": "493042",
+    "type": "710",
+    "location": "מג\"ד צוות",
+    "department": "מפקדה",
+    "equipmentType": "אורגני",
+    "updated": "20/11/2025",
+    "checked": false,
+    "faulty": false,
+    "credited": false,
+    "note": ""
+  },
+  {
+    "check": "351487",
+    "type": "טל 88",
+    "location": "מג\"ד צוות",
+    "department": "מפקדה",
+    "equipmentType": "אורגני",
+    "updated": "20/11/2025",
+    "checked": false,
+    "faulty": false,
+    "credited": false,
+    "note": ""
+  },
+  {
+    "check": "529876",
+    "type": "מגן מכלול",
+    "location": "מג״ד רכב דוד 2",
+    "department": "מפקדה",
+    "equipmentType": "אורגני",
+    "updated": "20/11/2025",
+    "checked": false,
+    "faulty": false,
+    "credited": false,
+    "note": ""
+  },
+  {
+    "check": "1107005",
+    "type": "מדיה נתיקה",
+    "location": "מג״ד רכב דוד 2",
+    "department": "מפקדה",
+    "equipmentType": "אורגני",
+    "updated": "20/11/2025",
+    "checked": false,
+    "faulty": false,
+    "credited": false,
+    "note": ""
+  },
+  {
+    "check": "802017",
+    "type": "710",
+    "location": "מג\"ד רכב חפק",
+    "department": "מפקדה",
+    "equipmentType": "אורגני",
+    "updated": "20/11/2025",
+    "checked": false,
+    "faulty": false,
+    "credited": false,
+    "note": ""
+  },
+  {
+    "check": "543634",
+    "type": "מודם",
+    "location": "מג\"ד רכב חפק שו\"ב דואלי",
+    "department": "מפקדה",
+    "equipmentType": "אורגני",
+    "updated": "20/11/2025",
+    "checked": false,
+    "faulty": false,
+    "credited": false,
+    "note": ""
+  },
+  {
+    "check": "328693",
+    "type": "G2",
+    "location": "מג\"ד רכב חפק שו\"ב דואלי",
+    "department": "מפקדה",
+    "equipmentType": "אורגני",
+    "updated": "20/11/2025",
+    "checked": false,
+    "faulty": false,
+    "credited": false,
+    "note": ""
+  },
+  {
+    "check": "102311502",
+    "type": "אולר",
+    "location": "מפקד מוצב",
+    "department": "מפקדה",
+    "equipmentType": "אורגני",
+    "updated": "20/11/2025",
+    "checked": false,
+    "faulty": false,
+    "credited": false,
+    "note": ""
+  },
+  {
+    "check": "102302145",
+    "type": "אולר",
+    "location": "מפקד מכלול",
+    "department": "מפקדה",
+    "equipmentType": "אורגני",
+    "updated": "20/11/2025",
+    "checked": false,
+    "faulty": false,
+    "credited": false,
+    "note": ""
+  },
+  {
+    "check": "496285",
+    "type": "710",
+    "location": "מפקד פלס\"מ",
+    "department": "מפקדה",
+    "equipmentType": "אורגני",
+    "updated": "20/11/2025",
+    "checked": false,
+    "faulty": false,
+    "credited": false,
+    "note": ""
+  },
+  {
+    "check": "102302668",
+    "type": "אולר רשתי",
+    "location": "מפקד פלס\"מ",
+    "department": "מפקדה",
+    "equipmentType": "אורגני",
+    "updated": "20/11/2025",
+    "checked": false,
+    "faulty": false,
+    "credited": false,
+    "note": ""
+  },
+  {
+    "check": "353131",
+    "type": "טל 88",
+    "location": "מפקד פלס\"מ",
+    "department": "מפקדה",
+    "equipmentType": "אורגני",
+    "updated": "20/11/2025",
+    "checked": false,
+    "faulty": false,
+    "credited": false,
+    "note": ""
+  },
+  {
+    "check": "552556",
+    "type": "סלולר צבאי",
+    "location": "מפקד פלס\"מ",
+    "department": "מפקדה",
+    "equipmentType": "אורגני",
+    "updated": "20/11/2025",
+    "checked": false,
+    "faulty": false,
+    "credited": false,
+    "note": ""
+  },
+  {
+    "check": "102311498",
+    "type": "אולר",
+    "location": "מפקד פלס\"מ - אצל סמפ\"מ",
+    "department": "מפקדה",
+    "equipmentType": "אורגני",
+    "updated": "20/11/2025",
+    "checked": false,
+    "faulty": false,
+    "credited": false,
+    "note": ""
+  },
+  {
+    "check": "328660",
+    "type": "CF33",
+    "location": "משרד עודד",
+    "department": "מפקדה",
+    "equipmentType": "אורגני",
+    "updated": "20/11/2025",
+    "checked": false,
+    "faulty": false,
+    "credited": false,
+    "note": ""
+  },
+  {
+    "check": "800775",
+    "type": "710",
+    "location": "סמג\"ד יהודה",
+    "department": "מפקדה",
+    "equipmentType": "אורגני",
+    "updated": "20/11/2025",
+    "checked": false,
+    "faulty": false,
+    "credited": false,
+    "note": ""
+  },
+  {
+    "check": "102311492",
+    "type": "אולר",
+    "location": "סמג\"ד יהודה",
+    "department": "מפקדה",
+    "equipmentType": "אורגני",
+    "updated": "20/11/2025",
+    "checked": false,
+    "faulty": false,
+    "credited": false,
+    "note": ""
+  },
+  {
+    "check": "102302768",
+    "type": "אולר רשתי",
+    "location": "סמג\"ד יואל",
+    "department": "מפקדה",
+    "equipmentType": "אורגני",
+    "updated": "20/11/2025",
+    "checked": false,
+    "faulty": false,
+    "credited": false,
+    "note": ""
+  },
+  {
+    "check": "550088",
+    "type": "סלולר צבאי",
+    "location": "סמג\"ד יואל",
+    "department": "מפקדה",
+    "equipmentType": "אורגני",
+    "updated": "20/11/2025",
+    "checked": false,
+    "faulty": false,
+    "credited": false,
+    "note": ""
+  },
+  {
+    "check": "493968",
+    "type": "710",
+    "location": "סמג\"ד יואל מצומצם",
+    "department": "מפקדה",
+    "equipmentType": "אורגני",
+    "updated": "20/11/2025",
+    "checked": false,
+    "faulty": false,
+    "credited": false,
+    "note": ""
+  },
+  {
+    "check": "495257",
+    "type": "710",
+    "location": "סמג\"ד יואל מצומצם",
+    "department": "מפקדה",
+    "equipmentType": "אורגני",
+    "updated": "20/11/2025",
+    "checked": false,
+    "faulty": false,
+    "credited": false,
+    "note": ""
+  },
+  {
+    "check": "876936",
+    "type": "710",
+    "location": "סמג\"ד יואל מצומצם",
+    "department": "מפקדה",
+    "equipmentType": "אורגני",
+    "updated": "20/11/2025",
+    "checked": false,
+    "faulty": false,
+    "credited": false,
+    "note": ""
+  },
+  {
+    "check": "352796",
+    "type": "טל 88",
+    "location": "סמג\"ד יואל מצומצם",
+    "department": "מפקדה",
+    "equipmentType": "אורגני",
+    "updated": "20/11/2025",
+    "checked": false,
+    "faulty": false,
+    "credited": false,
+    "note": ""
+  },
+  {
+    "check": "599434",
+    "type": "מגן מכלול",
+    "location": "פלס\"מ טנ\"א 705698 קטקל חימוש",
+    "department": "מפקדה",
+    "equipmentType": "אורגני",
+    "updated": "20/11/2025",
+    "checked": false,
+    "faulty": false,
+    "credited": false,
+    "note": ""
+  },
+  {
+    "check": "1108306",
+    "type": "מדיה נתיקה",
+    "location": "פלס\"מ טנ\"א 705698 קטקל חימוש",
+    "department": "מפקדה",
+    "equipmentType": "אורגני",
+    "updated": "20/11/2025",
+    "checked": false,
+    "faulty": false,
+    "credited": false,
+    "note": ""
+  },
+  {
+    "check": "102314728",
+    "type": "אולר רשתי",
+    "location": "ק.אג\"מ ינון",
+    "department": "מפקדה",
+    "equipmentType": "אורגני",
+    "updated": "20/11/2025",
+    "checked": false,
+    "faulty": false,
+    "credited": false,
+    "note": ""
+  },
+  {
+    "check": "491148",
+    "type": "710",
+    "location": "ק.אג\"מ נגר",
+    "department": "מפקדה",
+    "equipmentType": "אורגני",
+    "updated": "20/11/2025",
+    "checked": false,
+    "faulty": false,
+    "credited": false,
+    "note": ""
+  },
+  {
+    "check": "102317102",
+    "type": "אולר",
+    "location": "ק.אג\"מ נגר",
+    "department": "מפקדה",
+    "equipmentType": "אורגני",
+    "updated": "20/11/2025",
+    "checked": false,
+    "faulty": false,
+    "credited": false,
+    "note": ""
+  },
+  {
+    "check": "493465",
+    "type": "710",
+    "location": "קל\"ג",
+    "department": "מפקדה",
+    "equipmentType": "אורגני",
+    "updated": "20/11/2025",
+    "checked": false,
+    "faulty": false,
+    "credited": false,
+    "note": ""
+  },
+  {
+    "check": "492946",
+    "type": "710",
+    "location": "קמ\"ן",
+    "department": "מפקדה",
+    "equipmentType": "אורגני",
+    "updated": "20/11/2025",
+    "checked": false,
+    "faulty": false,
+    "credited": false,
+    "note": ""
+  },
+  {
+    "check": "102307591",
+    "type": "אולר",
+    "location": "קמ\"ן",
+    "department": "מפקדה",
+    "equipmentType": "אורגני",
+    "updated": "20/11/2025",
+    "checked": false,
+    "faulty": false,
+    "credited": false,
+    "note": ""
+  },
+  {
+    "check": "102307605",
+    "type": "אולר",
+    "location": "קש\"א",
+    "department": "מפקדה",
+    "equipmentType": "אורגני",
+    "updated": "20/11/2025",
+    "checked": false,
+    "faulty": false,
+    "credited": false,
+    "note": ""
+  },
+  {
+    "check": "491397",
+    "type": "710",
+    "location": "רופא",
+    "department": "מפקדה",
+    "equipmentType": "אורגני",
+    "updated": "20/11/2025",
+    "checked": false,
+    "faulty": false,
+    "credited": false,
+    "note": ""
+  },
+  {
+    "check": "102307595",
+    "type": "אולר",
+    "location": "רופא",
+    "department": "מפקדה",
+    "equipmentType": "אורגני",
+    "updated": "20/11/2025",
+    "checked": false,
+    "faulty": false,
+    "credited": false,
+    "note": ""
+  },
+  {
+    "check": "553248",
+    "type": "סלולר צבאי",
+    "location": "רופא",
+    "department": "מפקדה",
+    "equipmentType": "אורגני",
+    "updated": "20/11/2025",
+    "checked": false,
+    "faulty": false,
+    "credited": false,
+    "note": ""
+  },
+  {
+    "check": "599843",
+    "type": "מגן מכלול",
+    "location": "רופא האמרבולנס ",
+    "department": "מפקדה",
+    "equipmentType": "אורגני",
+    "updated": "20/11/2025",
+    "checked": false,
+    "faulty": false,
+    "credited": false,
+    "note": ""
+  },
+  {
+    "check": "1111993",
+    "type": "מדיה נתיקה",
+    "location": "רופא האמרבולנס ",
+    "department": "מפקדה",
+    "equipmentType": "אורגני",
+    "updated": "20/11/2025",
+    "checked": false,
+    "faulty": false,
+    "credited": false,
+    "note": ""
+  }
+];
+
+        debugLog('Data array after definition: ' + data.length + ' items');
+        debugLog('First item: ' + (data[0] ? JSON.stringify(data[0]) : 'undefined'));
+        debugLog('Data type: ' + typeof data);
+        debugLog('Data is array? ' + Array.isArray(data));
+
+        // ==========================================================================
+
+        /**
+         * Mobile-friendly status logger (shows message bar at bottom)
+         * @param {string} message - Text to display/log
+         * @param {Object} options - { isError: boolean, show: boolean }
+         */
+        function logStatus(message, options = {}) {
+            const { isError = false, show = false } = options;
+            const bar = document.getElementById('debug-status');
+            if (bar) {
+                // Always show the last 3 messages
+                const time = new Date().toLocaleTimeString('he-IL');
+                const prefix = isError ? '❌' : 'ℹ️';
+                bar.innerHTML = `<span style="color: ${isError ? '#ff6b6b' : '#74b9ff'}">${prefix} [${time}]</span> ${message}`;
+                
+                if (isError) {
+                    bar.classList.add('error', 'show');
+                    bar.style.display = 'block';
+                } else if (show) {
+                    bar.classList.remove('error');
+                    bar.classList.add('show');
+                    bar.style.display = 'block';
+                    clearTimeout(bar._timeoutId);
+                    bar._timeoutId = setTimeout(() => {
+                        if (!bar.classList.contains('error')) {
+                            bar.style.display = 'none';
+                            bar.classList.remove('show');
+                        }
+                    }, 8000);
+                }
+            }
+            // Also add to debug log
+            debugLog(message, isError);
+        }
+
+        /**
+         * Debug logger that accumulates messages on screen for mobile debugging
+         * @param {string} message - Debug message
+         * @param {boolean} isError - Whether this is an error message
+         */
+        let debugMessages = [];
+        function debugLog(message, isError = false) {
+            debugMessages.push({
+                time: new Date().toLocaleTimeString('he-IL'),
+                message: message,
+                isError: isError
+            });
+
+            // Keep only last 10 messages
+            if (debugMessages.length > 10) {
+                debugMessages.shift();
+            }
+
+            // Update debug display
+            updateDebugDisplay();
+
+            // Also log to console
+            if (isError) {
+                console.error(message);
+            } else {
+                console.log(message);
+            }
+        }
+
+        function updateDebugDisplay() {
+            const debugDiv = document.getElementById('debug-display');
+            if (debugDiv) {
+                if (debugMessages.length === 0) {
+                    debugDiv.innerHTML = '<div style="color: #999; font-size: 11px; padding: 10px;">אין הודעות דיבאג עדיין...</div>';
+                } else {
+                    debugDiv.innerHTML = debugMessages.map((msg, idx) =>
+                        `<div style="color: ${msg.isError ? '#ff6b6b' : '#74b9ff'}; font-size: 11px; margin: 3px 0; padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,0.1);">
+                            <span style="color: #999; font-size: 9px;">[${idx + 1}]</span> 
+                            <span style="color: #aaa; font-size: 9px;">[${msg.time}]</span> 
+                            ${msg.message}
+                        </div>`
+                    ).join('');
+                    // Scroll to bottom
+                    setTimeout(() => {
+                        debugDiv.scrollTop = debugDiv.scrollHeight;
+                    }, 100);
+                }
+            }
+        }
+
+        function toggleDebug() {
+            console.log('toggleDebug called');
+            const debugDiv = document.getElementById('debug-display');
+            const toggleBtn = document.getElementById('debug-toggle');
+            
+            if (!debugDiv) {
+                console.error('debug-display element not found!');
+                alert('שגיאה: אלמנט דיבאג לא נמצא');
+                return;
+            }
+            
+            const isVisible = debugDiv.style.display === 'block' || debugDiv.classList.contains('show');
+            console.log('Current state:', isVisible ? 'visible' : 'hidden');
+            
+            if (isVisible) {
+                debugDiv.style.display = 'none';
+                debugDiv.classList.remove('show');
+                if (toggleBtn) toggleBtn.textContent = '🐛';
+            } else {
+                debugDiv.style.display = 'block';
+                debugDiv.classList.add('show');
+                if (toggleBtn) toggleBtn.textContent = '✕';
+                updateDebugDisplay();
+            }
+            
+            console.log('New state:', debugDiv.style.display);
+        }
+
+        /**
+         * Safe access wrapper for localStorage (handles Safari file:// restrictions)
+         */
+        const SafeStorage = {
+            getItem(key) {
+                try {
+                    return window.localStorage.getItem(key);
+                } catch (e) {
+                    logStatus(`Storage read blocked (${e.message})`, { isError: true });
+                    return null;
+                }
+            },
+            setItem(key, value) {
+                try {
+                    window.localStorage.setItem(key, value);
+                    return true;
+                } catch (e) {
+                    logStatus(`Storage write blocked (${e.message})`, { isError: true });
+                    return false;
+                }
+            },
+            removeItem(key) {
+                try {
+                    window.localStorage.removeItem(key);
+                    return true;
+                } catch (e) {
+                    logStatus(`Storage remove blocked (${e.message})`, { isError: true });
+                    return false;
+                }
+            }
+        };
+
+        let currentData = [...data];
+        let sortDirection = 1; // 1 for ascending, -1 for descending
+
+        // ==========================================================================
+        // LOCALSTORAGE PERSISTENCE
+        // ==========================================================================
+        
+        /**
+         * Saves current data state to localStorage
+         * Auto-saves every 10 seconds and on window close
+         */
+        function saveToLocalStorage() {
+            try {
+                const saveData = {
+                    data: data,
+                    lastSaved: new Date().toISOString()
+                };
+                
+                const success = SafeStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
+                if (!success) {
+                    return false;
+                }
+                
+                const statusEl = document.getElementById('saveStatus');
+                if (statusEl) {
+                    const time = new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
+                    statusEl.textContent = `✓ נשמר אוטומטית ב-${time}`;
+                    statusEl.style.color = '#28a745';
+                }
+                return true;
+            } catch (e) {
+                logStatus(`Save error: ${e.message}`, { isError: true });
+                return false;
+            }
+        }
+
+        /**
+         * Loads saved data from localStorage
+         * Merges saved state with original data array
+         */
+        function loadFromLocalStorage() {
+            try {
+                const saved = SafeStorage.getItem(STORAGE_KEY);
+                if (saved) {
+                    const saveData = JSON.parse(saved);
+                    
+                    // Merge saved data with original data
+                    saveData.data.forEach(function(savedItem) {
+                        const originalItem = data.find(function(item) { return item.check === savedItem.check; });
+                        if (originalItem) {
+                            Object.assign(originalItem, savedItem);
+                        }
+                    });
+                    
+                    const statusEl = document.getElementById('saveStatus');
+                    if (statusEl) {
+                        const savedDate = new Date(saveData.lastSaved);
+                        const time = savedDate.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
+                        statusEl.textContent = `📂 נטען מ-${time}`;
+                        statusEl.style.color = '#17a2b8';
+                    }
+                    logStatus(`Loaded ${saveData.data.length} פריטים מהשמירה`, { show: true });
+                    return true;
+                }
+            } catch (e) {
+                logStatus(`Load error: ${e.message}`, { isError: true });
+            }
+            
+            const statusEl = document.getElementById('saveStatus');
+            if (statusEl) {
+                statusEl.textContent = 'נטענו נתונים ראשוניים';
+                statusEl.style.color = '#6c757d';
+            }
+            logStatus(`Loaded default dataset (${data.length})`, { show: true });
+            return false;
+        }
+
+        /**
+         * Manual save triggered by user button click
+         */
+        function manualSave() {
+            const success = saveToLocalStorage();
+            if (success) {
+                alert('✓ הנתונים נשמרו בהצלחה!');
+            } else {
+                alert('✗ שגיאה בשמירת הנתונים');
+            }
+        }
+
+        /**
+         * Clears all saved data and resets to initial state
+         */
+        function clearAllData() {
+            if (confirm('⚠️ האם אתה בטוח שברצונך למחוק את כל הנתונים השמורים?\n\nפעולה זו תאפס את כל הסימונים, ההערות והמיקומים למצב ההתחלתי.')) {
+                try {
+                    // Clear localStorage
+                    SafeStorage.removeItem(STORAGE_KEY);
+                    
+                    // Reset all data to initial state
+                    data.forEach(item => {
+                        item.checked = false;
+                        item.faulty = false;
+                        item.credited = false;
+                        item.note = '';
+                        // Location remains as is - user might want to keep it
+                    });
+                    
+                    // Refresh display
+                    currentData = [...data];
+                    renderTable();
+                    updateStats();
+                    
+                    const statusEl = document.getElementById('saveStatus');
+                    if (statusEl) {
+                        statusEl.textContent = '🔄 הנתונים אופסו';
+                        statusEl.style.color = '#fd7e14';
+                    }
+                    
+                    alert('✓ הנתונים אופסו בהצלחה!');
+                } catch (e) {
+                    console.error('Clear error:', e);
+                    alert('✗ שגיאה באיפוס הנתונים');
+                }
+            }
+        }
+
+        // Auto-save every 10 seconds
+        setInterval(() => {
+            saveToLocalStorage();
+        }, 10000);
+
+        // Save on window close
+        window.addEventListener('beforeunload', () => {
+            saveToLocalStorage();
+        });
+
+        // ==========================================================================
+        // INITIALIZATION
+        // ==========================================================================
+        
+        /**
+         * Initializes the dashboard on page load
+         * Sets up filters, loads saved data, and renders initial state
+         */
+        function init() {
+            try {
+                debugLog('=== DASHBOARD INIT START ===');
+                logStatus('מאתחל את הדשבורד...', { show: true });
+
+                debugLog('Step 1: Checking DOM elements...');
+                // Verify critical elements exist
+                const requiredElements = ['departmentName', 'currentDate', 'tableBody', 'searchInput'];
+                const missing = requiredElements.filter(id => !document.getElementById(id));
+
+                if (missing.length > 0) {
+                    const errorMsg = `שגיאה: חסרים רכיבי DOM (${missing.join(', ')})`;
+                    debugLog(errorMsg, true);
+                    logStatus(errorMsg, { isError: true });
+                    alert('שגיאה בטעינת הדף. אנא רענן את הדף.');
+                    return;
+                }
+                debugLog('✓ All DOM elements found');
+
+                debugLog('Step 2: Setting department name...');
+                document.getElementById('departmentName').textContent = DEPARTMENT_NAME;
+
+                debugLog('Step 3: Loading from storage...');
+                loadFromLocalStorage();
+
+                debugLog('Step 4: Setting date...');
+                const today = new Date();
+                document.getElementById('currentDate').textContent =
+                    `עודכן ב-${today.toLocaleDateString('he-IL')}`;
+
+                debugLog('Step 5: Preparing data...');
+                // Ensure currentData has initial data
+                currentData = data.slice();
+                debugLog(`Data array: ${data.length} items`);
+                debugLog(`Current data length: ${currentData.length}`);
+
+                debugLog('Step 6: Populating filters...');
+                populateFilters();
+
+                debugLog('Step 7: Rendering table...');
+                renderTable();
+
+                debugLog('Step 8: Updating stats...');
+                updateStats();
+
+                console.log('Step 9: Setting up event listeners...');
+                // Event listeners
+                document.getElementById('searchInput').addEventListener('input', filterData);
+                document.getElementById('filterLocation').addEventListener('change', filterData);
+                document.getElementById('filterType').addEventListener('change', filterData);
+                document.querySelectorAll('input[name="equipmentType"]').forEach(function(radio) {
+                    radio.addEventListener('change', filterData);
+                });
+
+                logStatus(`הדשבורד מוכן (${currentData.length} רשומות)`, { show: true });
+                debugLog('=== DASHBOARD INIT COMPLETE ===');
+
+                // Final verification
+                setTimeout(function() {
+                    const tbody = document.getElementById('tableBody');
+                    if (tbody && tbody.children.length === 0) {
+                        debugLog('ERROR: Table rendered but no rows visible!', true);
+                        logStatus('שגיאה: טבלה נוצרה אבל ללא שורות', { isError: true });
+                    } else if (tbody) {
+                        debugLog(`SUCCESS: Table has ${tbody.children.length} rows`);
+                    }
+                }, 100);
+
+            } catch (e) {
+                const errorMsg = `Init error: ${e.message}`;
+                console.error(errorMsg, e);
+                logStatus(errorMsg, { isError: true });
+            }
+        }
+
+        // ==========================================================================
+        // FILTER POPULATION
+        // ==========================================================================
+        
+        /**
+         * Populates location and type filter dropdowns with unique values from data
+         */
+        function populateFilters() {
+            // Populate location filter
+            const locationSelect = document.getElementById('filterLocation');
+            const uniqueLocations = [...new Set(data.map(d => d.location))].sort();
+            uniqueLocations.forEach(loc => {
+                const option = document.createElement('option');
+                option.value = loc;
+                option.textContent = loc;
+                locationSelect.appendChild(option);
+            });
+            
+            // Populate type filter
+            const typeSelect = document.getElementById('filterType');
+            const uniqueTypes = [...new Set(data.map(d => d.type))].sort();
+            uniqueTypes.forEach(type => {
+                const option = document.createElement('option');
+                option.value = type;
+                option.textContent = type;
+                typeSelect.appendChild(option);
+            });
+        }
+
+        // ==========================================================================
+        // TABLE RENDERING
+        // ==========================================================================
+        
+        /**
+         * Renders the main data table with all rows
+         * Applies conditional styling based on item status (checked/faulty/credited)
+         */
+        function renderTable() {
+            try {
+                debugLog('=== RENDER TABLE START ===');
+                debugLog(`renderTable called, currentData: ${currentData ? currentData.length : 'null'} items`);
+
+                const tbody = document.getElementById('tableBody');
+                if (!tbody) {
+                    const errorMsg = 'שגיאה: אלמנט טבלה לא נמצא';
+                    debugLog(errorMsg, true);
+                    logStatus(errorMsg, { isError: true });
+                    return;
+                }
+                debugLog('✓ Found tableBody element');
+
+                if (!currentData || currentData.length === 0) {
+                    const msg = 'אין נתונים להצגה';
+                    debugLog(msg);
+                    logStatus(msg, { show: true });
+                    tbody.innerHTML = '<tr><td colspan="7" style="padding: 40px; text-align: center; color: #999;">אין נתונים להצגה</td></tr>';
+                    return;
+                }
+                debugLog(`✓ Data found: ${currentData.length} items`);
+
+                // First, let's try a simple test - add one row manually to verify rendering works
+                if (currentData.length > 0) {
+                    debugLog('Testing simple row insertion...');
+                    const testRow = document.createElement('tr');
+                    testRow.innerHTML = '<td>✓</td><td>בדיקה</td><td>פשוטה</td><td>123</td><td>מיקום</td><td>היום</td><td>פעולות</td>';
+                    tbody.appendChild(testRow);
+                    debugLog('✓ Test row added');
+                }
+
+                let html = '';
+                
+                for (let i = 0; i < currentData.length; i++) {
+                    const row = currentData[i];
+                    let rowClass = '';
+                    
+                    if (row.credited) {
+                        rowClass = 'credited';
+                    } else if (row.faulty) {
+                        rowClass = 'faulty';
+                    } else if (row.checked) {
+                        rowClass = 'checked';
+                    }
+                    
+                    const badge = row.equipmentType === 'קווי' 
+                        ? '<span class="equipment-badge badge-kavi">📡 קווי</span>' 
+                        : '<span class="equipment-badge badge-organi">🟢 אורגני</span>';
+                    
+                    html += `
+                    <tr id="row-${row.check}" class="${rowClass}">
+                        <td>
+                            <input type="checkbox" 
+                                   id="check-${row.check}" 
+                                   ${row.checked ? 'checked' : ''}
+                                   onchange="saveCheckState('${row.check}', this.checked)">
+                        </td>
+                        <td>${badge}</td>
+                        <td>${row.type}</td>
+                        <td><strong>${row.check}</strong></td>
+                        <td>
+                            <input type="text" class="location-input" id="location-${row.check}"
+                                   value="${row.location}"
+                                   onchange="updateLocation('${row.check}', this.value)">
+                        </td>
+                        <td>${row.updated}</td>
+                        <td>
+                            <button class="btn-fault ${row.faulty ? 'active' : ''}" 
+                                    id="fault-${row.check}"
+                                    onclick="toggleFault('${row.check}')">
+                                ${row.faulty ? '⚠️ תקול' : 'תקול'}
+                            </button>
+                            <button class="btn-note ${row.note ? 'active' : ''}" 
+                                    id="note-btn-${row.check}"
+                                    onclick="toggleNote('${row.check}')">
+                                ${row.note ? '📝 יש הערה' : 'הוסף הערה'}
+                            </button>
+                            <button class="btn-credit ${row.credited ? 'active' : ''}" 
+                                    id="credit-${row.check}"
+                                    onclick="toggleCredit('${row.check}')">
+                                ${row.credited ? '🎖️ זוכה' : 'זוכה'}
+                            </button>
+                        </td>
+                    </tr>`;
+                }
+                
+                debugLog('Setting tbody.innerHTML...');
+                debugLog('HTML length: ' + html.length + ' characters');
+                debugLog('First 200 chars: ' + html.substring(0, 200));
+                
+                // First, clear the test row
+                tbody.innerHTML = '';
+                
+                // Add a simple test row first to verify rendering works
+                const testRow = document.createElement('tr');
+                testRow.style.background = '#ffeb3b';
+                testRow.innerHTML = '<td colspan="7" style="padding: 10px; text-align: center; font-weight: bold;">🔍 בדיקה: ' + currentData.length + ' שורות נמצאו</td>';
+                tbody.appendChild(testRow);
+                
+                // Now add the actual data
+                tbody.innerHTML = html;
+                debugLog('✓ HTML set, adding note rows...');
+
+                let notesAdded = 0;
+                currentData.forEach(function(row) {
+                    if (row.note) {
+                        addNoteRow(row.check, row.note);
+                        notesAdded++;
+                    }
+                });
+                debugLog(`✓ Added ${notesAdded} note rows`);
+
+                debugLog('Updating stats...');
+                updateStats();
+
+                debugLog('=== RENDER TABLE COMPLETE ===');
+                logStatus(`טבלה עודכנה (${currentData.length} שורות)`, { show: true });
+            } catch (e) {
+                const errorMsg = `Render error: ${e.message}`;
+                console.error(errorMsg, e);
+                logStatus(errorMsg, { isError: true });
+            }
+        }
+
+        // ==========================================================================
+        // NOTE MANAGEMENT
+        // ==========================================================================
+        
+        /**
+         * Adds or updates a note row below the main equipment row
+         * @param {string} checkNum - Equipment check number
+         * @param {string} noteText - Note text content
+         */
+        function addNoteRow(checkNum, noteText = '') {
+            const mainRow = document.getElementById(`row-${checkNum}`);
+            if (!mainRow) return;
+            
+            let noteRow = document.getElementById(`note-row-${checkNum}`);
+            
+            if (!noteRow) {
+                noteRow = document.createElement('tr');
+                noteRow.id = `note-row-${checkNum}`;
+                noteRow.className = 'note-row';
+                noteRow.innerHTML = `
+                    <td colspan="7">
+                        <textarea 
+                            class="note-input" 
+                            id="note-input-${checkNum}"
+                            placeholder="הקלד הערה..."
+                            onchange="saveNote('${checkNum}', this.value)"
+                        >${noteText}</textarea>
+                    </td>
+                `;
+                
+                mainRow.parentNode.insertBefore(noteRow, mainRow.nextSibling);
+            } else {
+                const noteInput = document.getElementById(`note-input-${checkNum}`);
+                if (noteInput) {
+                    noteInput.value = noteText;
+                }
+            }
+        }
+        
+        /**
+         * Toggles note row visibility
+         * @param {string} checkNum - Equipment check number
+         */
+        function toggleNote(checkNum) {
+            const originalItem = data.find(item => item.check === checkNum);
+            const noteRow = document.getElementById(`note-row-${checkNum}`);
+            const btn = document.getElementById(`note-btn-${checkNum}`);
+            
+            if (noteRow) {
+                noteRow.remove();
+                if (!originalItem.note) {
+                    btn.classList.remove('active');
+                    btn.innerHTML = 'הוסף הערה';
+                }
+            } else {
+                addNoteRow(checkNum, originalItem.note || '');
+                btn.classList.add('active');
+                btn.innerHTML = originalItem.note ? '📝 יש הערה' : '📝 הוסף הערה';
+            }
+        }
+        
+        /**
+         * Saves note text to data array
+         * @param {string} checkNum - Equipment check number
+         * @param {string} noteValue - Note text content
+         */
+        function saveNote(checkNum, noteValue) {
+            const originalItem = data.find(item => item.check === checkNum);
+            const currentItem = currentData.find(item => item.check === checkNum);
+            const btn = document.getElementById(`note-btn-${checkNum}`);
+            
+            if (originalItem) {
+                originalItem.note = noteValue;
+            }
+            if (currentItem) {
+                currentItem.note = noteValue;
+            }
+            
+            // Update button appearance
+            if (btn) {
+                if (noteValue.trim()) {
+                    btn.classList.add('active');
+                    btn.innerHTML = '📝 יש הערה';
+                } else {
+                    btn.classList.remove('active');
+                    btn.innerHTML = 'הוסף הערה';
+                }
+            }
+        }
+
+        // ==========================================================================
+        // STATUS TOGGLES
+        // ==========================================================================
+        
+        /**
+         * Toggles credit status for equipment
+         * @param {string} checkNum - Equipment check number
+         */
+        function toggleCredit(checkNum) {
+            const originalItem = data.find(item => item.check === checkNum);
+            const currentItem = currentData.find(item => item.check === checkNum);
+            
+            originalItem.credited = !originalItem.credited;
+            if (currentItem) {
+                currentItem.credited = originalItem.credited;
+            }
+            
+            const btn = document.getElementById(`credit-${checkNum}`);
+            if (btn) {
+                if (originalItem.credited) {
+                    btn.classList.add('active');
+                    btn.innerHTML = '🎖️ זוכה';
+                } else {
+                    btn.classList.remove('active');
+                    btn.innerHTML = 'זוכה';
+                }
+            }
+            
+            updateRowColor(checkNum);
+            updateStats();
+        }
+
+        /**
+         * Saves checkbox state (checked/unchecked)
+         * @param {string} checkNum - Equipment check number
+         * @param {boolean} isChecked - Checkbox state
+         */
+        function saveCheckState(checkNum, isChecked) {
+            const originalItem = data.find(item => item.check === checkNum);
+            
+            originalItem.checked = isChecked;
+            
+            const currentItem = currentData.find(item => item.check === checkNum);
+            if (currentItem) {
+                currentItem.checked = originalItem.checked;
+            }
+            
+            updateRowColor(checkNum);
+            updateStats();
+        }
+        
+        /**
+         * Toggles fault status for equipment
+         * @param {string} checkNum - Equipment check number
+         */
+        function toggleFault(checkNum) {
+            const originalItem = data.find(item => item.check === checkNum);
+            const currentItem = currentData.find(item => item.check === checkNum);
+            
+            originalItem.faulty = !originalItem.faulty;
+            if (currentItem) {
+                currentItem.faulty = originalItem.faulty;
+            }
+            
+            const btn = document.getElementById(`fault-${checkNum}`);
+            if (btn) {
+                if (originalItem.faulty) {
+                    btn.classList.add('active');
+                    btn.innerHTML = '⚠️ תקול';
+                } else {
+                    btn.classList.remove('active');
+                    btn.innerHTML = 'תקול';
+                }
+            }
+            
+            updateRowColor(checkNum);
+            updateStats();
+        }
+
+        /**
+         * Updates row background color based on status priority
+         * Priority: credited > faulty > checked
+         * @param {string} checkNum - Equipment check number
+         */
+        function updateRowColor(checkNum) {
+            const row = document.getElementById(`row-${checkNum}`);
+            if (!row) return;
+            
+            const item = data.find(item => item.check === checkNum);
+            
+            row.classList.remove('checked', 'faulty', 'credited');
+            
+            if (item.credited) {
+                row.classList.add('credited');
+            } else if (item.faulty) {
+                row.classList.add('faulty');
+            } else if (item.checked) {
+                row.classList.add('checked');
+            }
+        }
+
+        /**
+         * Updates location value for equipment
+         * @param {string} checkNum - Equipment check number
+         * @param {string} newLocation - New location value
+         */
+        function updateLocation(checkNum, newLocation) {
+            const originalItem = data.find(item => item.check === checkNum);
+            if (originalItem) {
+                originalItem.location = newLocation;
+            }
+            
+            const currentItem = currentData.find(item => item.check === checkNum);
+            if (currentItem) {
+                currentItem.location = newLocation;
+            }
+        }
+
+        // ==========================================================================
+        // FILTERING & SEARCH
+        // ==========================================================================
+        
+        /**
+         * Filters data based on search term and selected filters
+         * Updates currentData array and re-renders table
+         */
+        function filterData() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const locationFilter = document.getElementById('filterLocation').value;
+            const typeFilter = document.getElementById('filterType').value;
+            const equipmentFilter = document.querySelector('input[name="equipmentType"]:checked').value;
+            
+            currentData = data.filter(row => {
+                const matchesSearch = row.check.toLowerCase().includes(searchTerm) || 
+                                    row.location.toLowerCase().includes(searchTerm) ||
+                                    row.type.toLowerCase().includes(searchTerm);
+                const matchesLocation = !locationFilter || row.location === locationFilter;
+                const matchesType = !typeFilter || row.type === typeFilter;
+                const matchesEquipment = equipmentFilter === 'all' || row.equipmentType === equipmentFilter;
+                
+                return matchesSearch && matchesLocation && matchesType && matchesEquipment;
+            });
+            
+            renderTable();
+        }
+
+        // ==========================================================================
+        // STATISTICS
+        // ==========================================================================
+        
+        /**
+         * Updates statistics cards with current counts
+         * Shows total, checked, and unchecked equipment counts
+         */
+        function updateStats() {
+            document.getElementById('totalChecks').textContent = currentData.length;
+            
+            let checked = 0;
+            data.forEach(item => {
+                if (item.checked) checked++;
+            });
+            
+            document.getElementById('checkedCount').textContent = checked;
+            document.getElementById('uncheckedCount').textContent = data.length - checked;
+        }
+
+        // ==========================================================================
+        // BULK ACTIONS
+        // ==========================================================================
+        
+        /**
+         * Checks all currently visible items in filtered view
+         */
+        function selectAll() {
+            currentData.forEach(item => {
+                const originalItem = data.find(d => d.check === item.check);
+                if (originalItem) {
+                    originalItem.checked = true;
+                    item.checked = true;
+                }
+            });
+            
+            renderTable();
+        }
+
+        /**
+         * Unchecks all currently visible items in filtered view
+         */
+        function deselectAll() {
+            currentData.forEach(item => {
+                const originalItem = data.find(d => d.check === item.check);
+                if (originalItem) {
+                    originalItem.checked = false;
+                    item.checked = false;
+                }
+            });
+            
+            renderTable();
+        }
+
+        // ==========================================================================
+        // SORTING
+        // ==========================================================================
+        
+        /**
+         * Sorts table by specified column
+         * Toggles between ascending and descending order
+         * @param {string} column - Column key to sort by
+         */
+        function sortTable(column) {
+            currentData.sort(function(a, b) {
+                const normalize = function(value) {
+                    if (value === undefined || value === null) {
+                        return '';
+                    }
+                    return value.toString().toLowerCase();
+                };
+                
+                const valA = normalize(a[column]);
+                const valB = normalize(b[column]);
+                
+                if (valA < valB) return -1 * sortDirection;
+                if (valA > valB) return 1 * sortDirection;
+                return 0;
+            });
+            sortDirection *= -1;
+            renderTable();
+        }
+
+        // ==========================================================================
+        // EXCEL EXPORT
+        // ==========================================================================
+        
+        /**
+         * Exports current data to Excel file with formatting
+         * Includes color-coded rows based on status
+         * Applies filters and column widths
+         */
+        function exportToExcel() {
+            const today = new Date().toLocaleDateString('he-IL');
+            
+            // Build export data with proper column structure
+            const exportData = data.map(row => {
+                let reportStatus = row.checked ? 'דווח' : 'לא דווח';
+                let deviceStatus = row.faulty ? 'תקול' : 'תקין';
+                let creditStatus = row.credited ? 'זוכה' : '';
+                
+                return {
+                    'מספר צ\'ק': row.check,
+                    'סוג צייד': row.equipmentType,
+                    'סוג מצפין': row.type,
+                    'מיקום': row.location,
+                    'סטטוס דיווח': reportStatus,
+                    'תקינות מכשיר': deviceStatus,
+                    'זוכה': creditStatus,
+                    'הערות': row.note || '',
+                    'עודכן לאחרונה': today
+                };
+            });
+
+            const ws = XLSX.utils.json_to_sheet(exportData);
+            
+            // Set column widths
+            ws['!cols'] = [
+                {wch: 15},  // Check number
+                {wch: 15},  // Equipment type
+                {wch: 18},  // Device type
+                {wch: 20},  // Location
+                {wch: 15},  // Report status
+                {wch: 15},  // Device status
+                {wch: 12},  // Credit
+                {wch: 50},  // Notes
+                {wch: 18}   // Updated
+            ];
+            
+            const range = XLSX.utils.decode_range(ws['!ref']);
+            
+            // Style header row
+            for (let C = range.s.c; C <= range.e.c; ++C) {
+                const headerAddress = XLSX.utils.encode_col(C) + "1";
+                if (!ws[headerAddress]) continue;
+                
+                ws[headerAddress].s = {
+                    font: { bold: true, color: { rgb: "FFFFFF" }, size: 12 },
+                    fill: { fgColor: { rgb: "667EEA" } },
+                    alignment: { horizontal: "center", vertical: "center", wrapText: true },
+                    border: {
+                        top: { style: "thin" },
+                        bottom: { style: "thin" },
+                        left: { style: "thin" },
+                        right: { style: "thin" }
+                    }
+                };
+            }
+            
+            // Style data rows with conditional formatting
+            for (let R = range.s.r + 1; R <= range.e.r; ++R) {
+                const reportStatusCell = ws[XLSX.utils.encode_cell({ r: R, c: 4 })];
+                const deviceStatusCell = ws[XLSX.utils.encode_cell({ r: R, c: 5 })];
+                const creditCell = ws[XLSX.utils.encode_cell({ r: R, c: 6 })];
+                
+                let rowFillColor = "FFFFFF";
+                let rowFontColor = "000000";
+                
+                // Priority: credited > faulty > checked
+                if (creditCell && creditCell.v === 'זוכה') {
+                    rowFillColor = "FFE0B2";
+                    rowFontColor = "E65100";
+                } else if (deviceStatusCell && deviceStatusCell.v === 'תקול') {
+                    rowFillColor = "FFC7CE";
+                    rowFontColor = "9C0006";
+                } else if (reportStatusCell && reportStatusCell.v === 'דווח') {
+                    rowFillColor = "C6EFCE";
+                    rowFontColor = "006100";
+                }
+                
+                for (let C = range.s.c; C <= range.e.c; ++C) {
+                    const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+                    if (!ws[cellAddress]) ws[cellAddress] = { t: 's', v: '' };
+                    
+                    ws[cellAddress].s = {
+                        fill: { fgColor: { rgb: rowFillColor } },
+                        font: { color: { rgb: rowFontColor }, size: 11 },
+                        alignment: { 
+                            horizontal: "center", 
+                            vertical: "center",
+                            wrapText: C === 7  // Wrap text in notes column
+                        },
+                        border: {
+                            top: { style: "thin" },
+                            bottom: { style: "thin" },
+                            left: { style: "thin" },
+                            right: { style: "thin" }
+                        }
+                    };
+                }
+            }
+            
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, `דוח צ' ${DEPARTMENT_NAME}`);
+            
+            const fileName = `דוח_צ_${DEPARTMENT_NAME.replace(/\s+/g, '_')}_${today.replace(/\//g, '-')}.xlsx`;
+            XLSX.writeFile(wb, fileName);
+            
+            return fileName;
+        }
+
+        // Global error handler for debugging on mobile devices
+        window.addEventListener('error', function(e) {
+            const details = e && e.message ? e.message : 'שגיאה לא ידועה';
+            logStatus(`שגיאת JavaScript: ${details}`, { isError: true });
+        });
+        
+        // ==========================================================================
+        // DEBUG LOGGING FOR MOBILE TROUBLESHOOTING
+        // ==========================================================================
+
+        debugLog('=== SCRIPT LOADED ===');
+        debugLog('Data array: ' + (data ? data.length : 'undefined') + ' items');
+        debugLog('DEPARTMENT_NAME: ' + DEPARTMENT_NAME);
+
+        // Initialize dashboard on page load
+        // Wait for DOM to be fully loaded (critical for Safari/iOS)
+        debugLog('Checking document.readyState: ' + document.readyState);
+        if (document.readyState === 'loading') {
+            debugLog('Adding DOMContentLoaded listener');
+            document.addEventListener('DOMContentLoaded', function() {
+                debugLog('DOMContentLoaded fired, calling init()');
+                setupDebugButton();
+                init();
+            });
+        } else {
+            debugLog('DOM already ready, calling init() immediately');
+            setupDebugButton();
+            init();
+        }
+
+        function setupDebugButton() {
+            const toggleBtn = document.getElementById('debug-toggle');
+            if (toggleBtn) {
+                debugLog('Setting up debug button event listener');
+                // Remove any existing listeners
+                toggleBtn.onclick = null;
+                // Add new listener
+                toggleBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    debugLog('Debug button clicked!');
+                    toggleDebug();
+                });
+                // Also try touch events for mobile
+                toggleBtn.addEventListener('touchend', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    debugLog('Debug button touched!');
+                    toggleDebug();
+                });
+                debugLog('✓ Debug button setup complete');
+            } else {
+                debugLog('ERROR: Debug button not found!', true);
+            }
+        }
+
+        debugLog('=== SCRIPT END ===');
+        
+        // Show initial message
+        setTimeout(function() {
+            if (debugMessages.length > 0) {
+                debugLog('📱 הדף נטען - לחץ על כפתור 🐛 למעלה כדי לראות את כל הלוגים');
+            }
+        }, 500);
+    </script>
+</body>
+</html>ד
